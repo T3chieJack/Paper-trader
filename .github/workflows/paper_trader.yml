@@ -1,34 +1,46 @@
 name: Paper Trader (Discord Poller)
 
 on:
+  workflow_dispatch:
   schedule:
-    - cron: "*/1 * * * *"   # every minute
-  workflow_dispatch: {}
+    - cron: "*/1 * * * *"   # every minute (UTC)
 
-# Prevent overlapping runs (avoids duplicate fills)
+# Prevent overlapping runs so a command can't be processed twice
 concurrency:
   group: paper-trader-poller
   cancel-in-progress: true
 
+# Default token perms for the whole workflow
+permissions:
+  contents: write  # needed to push portfolio/ledger/state updates
+
 jobs:
   poll:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write   # to commit portfolio/ledger/state updates
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -r requirements.txt
-      - name: Run Discord poller + commit updates
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run Discord poller
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}  # optional
           DEFAULT_CASH: ${{ secrets.DEFAULT_CASH }}
+        run: python trader_poller.py
+
+      - name: Commit portfolio/state updates (if any)
         run: |
-          python trader_poller.py
           if [[ -n $(git status --porcelain) ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -36,8 +48,3 @@ jobs:
             git commit -m "Update portfolio/state [skip ci]" || true
             git push
           fi
-
-          # ✅ NEW: prevent overlapping runs from double-processing
-concurrency:
-  group: paper-trader-poller
-  cancel-in-progress: true
