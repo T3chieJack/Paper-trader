@@ -5,11 +5,16 @@ on:
     - cron: "*/1 * * * *"   # every minute
   workflow_dispatch: {}
 
+# Prevent overlapping runs (avoids duplicate fills)
+concurrency:
+  group: paper-trader-poller
+  cancel-in-progress: true
+
 jobs:
   poll:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # to commit portfolio updates
+      contents: write   # to commit portfolio/ledger/state updates
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -27,8 +32,8 @@ jobs:
           if [[ -n $(git status --porcelain) ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add data/portfolio.json data/ledger.csv
-            git commit -m "Update portfolio [skip ci]" || true
+            git add data/portfolio.json data/ledger.csv data/state.json
+            git commit -m "Update portfolio/state [skip ci]" || true
             git push
           fi
 
