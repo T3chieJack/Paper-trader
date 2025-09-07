@@ -1,8 +1,8 @@
 {
-  "cash": 84675.1,
+  "cash": 95932.9,
   "positions": {
-    "AAPL": 50,
-    "NVDA": 20
+    "AAPL": 10,
+    "NVDA": 10
   },
   "last_mark": null
 }
