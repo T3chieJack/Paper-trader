@@ -1,30 +1,29 @@
-name: Paper Trader
+name: Paper Trader (Discord Poller)
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # fills every 5 minutes (keep it polite to data sources)
-  workflow_dispatch: {}      # allow manual run
+    - cron: "*/1 * * * *"   # every minute
+  workflow_dispatch: {}
 
 jobs:
-  fills:
+  poll:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      issues: write
+      contents: write   # to commit portfolio updates
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
-      - name: Run fills + commit portfolio updates
+      - name: Run Discord poller + commit updates
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # auto-provided
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          ORDER_LABEL: "paper-trade"
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}  # optional
+          DEFAULT_CASH: ${{ secrets.DEFAULT_CASH }}
         run: |
-          python trade_bot.py
+          python trader_poller.py
           if [[ -n $(git status --porcelain) ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
