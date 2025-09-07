@@ -1,0 +1,34 @@
+name: Paper Trader
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # fills every 5 minutes (keep it polite to data sources)
+  workflow_dispatch: {}      # allow manual run
+
+jobs:
+  fills:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Run fills + commit portfolio updates
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # auto-provided
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          ORDER_LABEL: "paper-trade"
+        run: |
+          python trade_bot.py
+          if [[ -n $(git status --porcelain) ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/portfolio.json data/ledger.csv
+            git commit -m "Update portfolio [skip ci]" || true
+            git push
+          fi
