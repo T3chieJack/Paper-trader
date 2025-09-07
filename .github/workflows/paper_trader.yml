@@ -31,3 +31,8 @@ jobs:
             git commit -m "Update portfolio [skip ci]" || true
             git push
           fi
+
+          # ✅ NEW: prevent overlapping runs from double-processing
+concurrency:
+  group: paper-trader-poller
+  cancel-in-progress: true
